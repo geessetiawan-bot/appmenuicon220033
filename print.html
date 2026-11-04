@@ -29,6 +29,7 @@
   <div id="nota" class="nota">Memuat nota…</div>
   <div class="btns">
     <button class="p" id="bPrint">🖨️ Cetak ke printer (RawBT)</button>
+    <button class="s" id="bShare">📤 Kirim ke RawBT (via Bagikan)</button>
     <button class="s" id="bPdf">📄 Simpan PDF / Bagikan</button>
   </div>
   <div class="info" id="info">Kalau RawBT tidak terbuka: pastikan RawBT ter-install dan printer sudah dipilih di RawBT.</div>
@@ -42,19 +43,34 @@
   if (q.get('id')) document.title = 'Nota ' + q.get('id');
 
   function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
-  var data = b64(t + '\n\n\n');
-  var intentUrl = 'intent:base64,' + data + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+  var full = t + '\n\n\n';
+  var data = b64(full);
+  var PKG = 'package=ru.a402d.rawbtprinter;end;';
+  // format resmi RawBT: intent:<teks/encodeURI>#Intent;scheme=rawbt;package=...;end;
+  var intentText = 'intent:' + encodeURI(full) + '#Intent;scheme=rawbt;' + PKG;
+  var intentB64 = 'intent:base64,' + data + '#Intent;scheme=rawbt;' + PKG;
   var schemeUrl = 'rawbt:base64,' + data;
+  var info = document.getElementById('info');
 
   document.getElementById('bPrint').onclick = function () {
     var isAndroid = /Android/i.test(navigator.userAgent);
-    location.href = isAndroid ? intentUrl : schemeUrl;
+    if (!isAndroid) { location.href = schemeUrl; return; }
+    info.textContent = 'Membuka RawBT… kalau tidak terbuka dalam 2 detik, pakai tombol "Kirim ke RawBT (via Bagikan)".';
+    location.href = intentText;
+    setTimeout(function () { if (document.visibilityState === 'visible') location.href = intentB64; }, 1200);
+  };
+  document.getElementById('bShare').onclick = function () {
+    if (navigator.share) {
+      navigator.share({ title: document.title, text: full }).catch(function () {});
+    } else {
+      info.textContent = 'HP ini tidak mendukung Bagikan. Pakai tombol Cetak.';
+    }
   };
   document.getElementById('bPdf').onclick = function () { window.print(); };
 
   // coba langsung buka RawBT sekali (sebagian browser butuh tap tombol)
   if (q.get('auto') === '1' && /Android/i.test(navigator.userAgent)) {
-    setTimeout(function () { location.href = intentUrl; }, 400);
+    setTimeout(function () { location.href = intentText; }, 400);
   }
 })();
 </script>
