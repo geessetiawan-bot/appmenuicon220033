@@ -76,6 +76,7 @@
       var i = t.lastIndexOf('Tanda tangan toko');
       if (i >= 0) document.getElementById('nota').textContent = t.slice(0, i).replace(/\s+$/, '') + '\n';
       document.getElementById('ttd').style.display = 'block'; info.textContent = '';
+      backup_(im.src);
     };
     im.onerror = function () {
       idx++;
@@ -89,6 +90,19 @@
       }
     };
     im.src = calon[0];
+  }
+
+
+  // MOM #10: backup nota + TTD ke Google Drive (Apps Script Web App). Gagal = diam, cetak tetap jalan.
+  var BACKUP_URL = 'https://script.google.com/macros/s/AKfycbyvD_hPde7aX5y9ZiHLM7hHP9lBdFXqUVAZ4TX9TTN59aySod03GExJ-Omi1Skp4jZ_jQ/exec';     // ← ganti dengan URL Web App (…/exec)
+  var KUNCI = 'BKL-NOTA-7Q4X29';
+  var sudahBackup = false;
+  function backup_(srcTtd) {
+    if (sudahBackup || !id || BACKUP_URL.indexOf('http') !== 0) return;
+    sudahBackup = true;
+    var teks = t.replace(/^\*\*\* CETAK ULANG[^\n]*\n[^\n]*\n\n/, '');   // tanpa header cetak ulang
+    fetch(BACKUP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ k: KUNCI, id: id, t: teks, sig: String(srcTtd).replace(/&r=\d+$/, '') }) }).catch(function () {});
   }
 
   function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
