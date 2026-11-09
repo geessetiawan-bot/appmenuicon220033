@@ -52,8 +52,17 @@
   var sig = q.get('sig');
   if (sig) {
     var im = document.getElementById('ttdImg');
-    im.onload = function () { document.getElementById('ttd').style.display = 'block'; };
-    im.onerror = function () { document.getElementById('info').textContent = 'TTD belum bisa dimuat (cek internet / tunggu sync), cetak teks tetap bisa.'; };
+    var info = document.getElementById('info'), coba = 0, MAKS = 20;   // coba ulang tiap 3 detik, maks ±1 menit (tunggu upload TTD selesai)
+    im.onload = function () { document.getElementById('ttd').style.display = 'block'; info.textContent = ''; };
+    im.onerror = function () {
+      coba++;
+      if (coba < MAKS) {
+        info.textContent = 'Menunggu TTD ter-upload… (' + coba + ')';
+        setTimeout(function () { im.src = sig + (sig.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now(); }, 3000);
+      } else {
+        info.textContent = 'TTD belum bisa dimuat (cek internet / tunggu sync), cetak teks tetap bisa.';
+      }
+    };
     im.src = sig;
   }
 
