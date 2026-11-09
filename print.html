@@ -50,6 +50,10 @@
 
   // TTD toko (link gambar dari AppSheet, parameter sig). Kalau kosong / gagal dimuat, nota tetap tampil tanpa TTD.
   var sig = q.get('sig');
+  // AppSheet kadang kirim link lengkap (http…), kadang hanya nama file (Penjualan_Images/xxx.png) → bentuk link-nya di sini
+  if (sig && sig.indexOf('http') !== 0) {
+    sig = 'https://www.appsheet.com/template/gettablefileurl?appName=PenjualanSalesTEST-193989837&tableName=Penjualan&fileName=' + encodeURIComponent(sig);
+  }
   if (sig) {
     var im = document.getElementById('ttdImg');
     var info = document.getElementById('info'), coba = 0, MAKS = 20;   // coba ulang tiap 3 detik, maks ±1 menit (tunggu upload TTD selesai)
