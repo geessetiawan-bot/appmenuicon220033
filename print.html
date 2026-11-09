@@ -32,7 +32,7 @@
 <body>
 <div class="wrap">
   <div id="nota" class="nota">Memuat nota…</div>
-  <div id="ttd" class="ttd"><div class="lbl">Tanda tangan toko:</div><img id="ttdImg" alt="TTD toko"></div>
+  <div id="ttd" class="ttd"><div class="lbl">Tanda tangan toko</div><img id="ttdImg" alt="TTD toko"><div class="lbl">________________</div></div>
   <div class="btns">
     <button class="p" id="bPrint">🖨️ Cetak ke printer (RawBT)</button>
     <button class="s" id="bShare">📤 Kirim ke RawBT (via Bagikan)</button>
@@ -57,7 +57,12 @@
   if (sig) {
     var im = document.getElementById('ttdImg');
     var info = document.getElementById('info'), coba = 0, MAKS = 20;   // coba ulang tiap 3 detik, maks ±1 menit (tunggu upload TTD selesai)
-    im.onload = function () { document.getElementById('ttd').style.display = 'block'; info.textContent = ''; };
+    im.onload = function () {
+      // tampilan: buang 'Tanda tangan toko' + garis dari teks, pindah ke blok TTD (label → gambar → garis)
+      var i = t.lastIndexOf('Tanda tangan toko');
+      if (i >= 0) document.getElementById('nota').textContent = t.slice(0, i).replace(/\s+$/, '') + '\n';
+      document.getElementById('ttd').style.display = 'block'; info.textContent = '';
+    };
     im.onerror = function () {
       coba++;
       if (coba < MAKS) {
