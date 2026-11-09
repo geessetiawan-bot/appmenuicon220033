@@ -49,6 +49,8 @@
   if (q.get('id')) document.title = 'Nota ' + q.get('id');
 
   // TTD toko (link gambar dari AppSheet, parameter sig). Kalau kosong / gagal dimuat, nota tetap tampil tanpa TTD.
+  var BACKUP_URL = 'ISI_URL_WEB_APP';     // ← ganti dengan URL Web App NOTA_BACKUP (…/exec)
+  var KUNCI = 'BKL-NOTA-7Q4X29';
   var sig = q.get('sig') || '', tw = q.get('tw') || '', id = q.get('id') || '';
   var BASE = 'https://www.appsheet.com/template/gettablefileurl?appName=PenjualanSalesTEST-193989837&tableName=Penjualan&fileName=';
   var calon = [];                                   // daftar link TTD yang dicoba
@@ -70,7 +72,7 @@
   }
   if (calon.length) {
     var im = document.getElementById('ttdImg');
-    var info = document.getElementById('info'), idx = 0, putaran = 0, MAKS = 20;   // ulang tiap 3 detik, maks ±1 menit (tunggu upload TTD)
+    var info = document.getElementById('info'), idx = 0, putaran = 0, MAKS = 40;   // ulang tiap ±3 detik, maks ±2 menit (tunggu upload TTD)
     im.onload = function () {
       // tampilan: buang 'Tanda tangan toko' + garis dari teks, pindah ke blok TTD (label → gambar → garis)
       var i = t.lastIndexOf('Tanda tangan toko');
@@ -84,18 +86,28 @@
       idx = 0; putaran++;
       if (putaran < MAKS) {
         info.textContent = 'Menunggu TTD ter-upload… (' + putaran + ')';
-        setTimeout(function () { im.src = calon[0] + '&r=' + Date.now(); }, 3000);
+        cariNama_(function () { setTimeout(function () { im.src = calon[0] + '&r=' + Date.now(); }, 3000); });
       } else {
         info.textContent = 'TTD belum bisa dimuat (cek internet / tunggu sync), cetak teks tetap bisa.';
       }
     };
+    // Tanya nama file TTD ke Web App (baca DB Penjualan.TTD_Toko). Ketemu → pakai nama pasti, tidak menebak lagi.
+    var namaPasti = !!sig;
+    function cariNama_(lanjut) {
+      if (namaPasti || !id || BACKUP_URL.indexOf('http') !== 0) return lanjut();
+      fetch(BACKUP_URL + '?k=' + encodeURIComponent(KUNCI) + '&id=' + encodeURIComponent(id))
+        .then(function (r) { return r.text(); })
+        .then(function (n) {
+          n = String(n || '').trim();
+          if (n.indexOf('Penjualan_Images/') === 0) { calon = [BASE + encodeURIComponent(n)]; namaPasti = true; }
+          lanjut();
+        }).catch(function () { lanjut(); });
+    }
     im.src = calon[0];
   }
 
 
   // MOM #10: backup nota + TTD ke Google Drive (Apps Script Web App). Gagal = diam, cetak tetap jalan.
-  var BACKUP_URL = 'https://script.google.com/macros/s/AKfycbyvD_hPde7aX5y9ZiHLM7hHP9lBdFXqUVAZ4TX9TTN59aySod03GExJ-Omi1Skp4jZ_jQ/exec';     // ← ganti dengan URL Web App (…/exec)
-  var KUNCI = 'BKL-NOTA-7Q4X29';
   var sudahBackup = false;
   function backup_(srcTtd) {
     if (sudahBackup || !id || BACKUP_URL.indexOf('http') !== 0) return;
