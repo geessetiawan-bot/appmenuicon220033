@@ -49,14 +49,28 @@
   if (q.get('id')) document.title = 'Nota ' + q.get('id');
 
   // TTD toko (link gambar dari AppSheet, parameter sig). Kalau kosong / gagal dimuat, nota tetap tampil tanpa TTD.
-  var sig = q.get('sig');
-  // AppSheet kadang kirim link lengkap (http…), kadang hanya nama file (Penjualan_Images/xxx.png) → bentuk link-nya di sini
-  if (sig && sig.indexOf('http') !== 0) {
-    sig = 'https://www.appsheet.com/template/gettablefileurl?appName=PenjualanSalesTEST-193989837&tableName=Penjualan&fileName=' + encodeURIComponent(sig);
+  var sig = q.get('sig') || '', tw = q.get('tw') || '', id = q.get('id') || '';
+  var BASE = 'https://www.appsheet.com/template/gettablefileurl?appName=PenjualanSalesTEST-193989837&tableName=Penjualan&fileName=';
+  var calon = [];                                   // daftar link TTD yang dicoba
+  if (sig.indexOf('http') === 0) calon = [sig];                       // link lengkap dari AppSheet
+  else if (sig) calon = [BASE + encodeURIComponent(sig)];             // nama file saja
+  else if (tw && id) {
+    // Langsung setelah Save: nama file belum terbaca. Pola nama: <ID_Jual>.TTD_Toko.<HHMMSS UTC>.png
+    // Tebak dari Waktu_TTD (WIB, -7 jam) ±8 detik.
+    var p = tw.replace(/[^0-9]/g, '');
+    if (p.length >= 6) {
+      var dtk = (+p.slice(0,2)) * 3600 + (+p.slice(2,4)) * 60 + (+p.slice(4,6)) - 7 * 3600;
+      var off = [0]; for (var k = 1; k <= 8; k++) off.push(-k, k);
+      off.forEach(function (o) {
+        var x = ((dtk + o) % 86400 + 86400) % 86400;
+        var hh = ('0' + Math.floor(x / 3600)).slice(-2), mm = ('0' + Math.floor(x % 3600 / 60)).slice(-2), ss = ('0' + x % 60).slice(-2);
+        calon.push(BASE + encodeURIComponent('Penjualan_Images/' + id + '.TTD_Toko.' + hh + mm + ss + '.png'));
+      });
+    }
   }
-  if (sig) {
+  if (calon.length) {
     var im = document.getElementById('ttdImg');
-    var info = document.getElementById('info'), coba = 0, MAKS = 20;   // coba ulang tiap 3 detik, maks ±1 menit (tunggu upload TTD selesai)
+    var info = document.getElementById('info'), idx = 0, putaran = 0, MAKS = 20;   // ulang tiap 3 detik, maks ±1 menit (tunggu upload TTD)
     im.onload = function () {
       // tampilan: buang 'Tanda tangan toko' + garis dari teks, pindah ke blok TTD (label → gambar → garis)
       var i = t.lastIndexOf('Tanda tangan toko');
@@ -64,15 +78,17 @@
       document.getElementById('ttd').style.display = 'block'; info.textContent = '';
     };
     im.onerror = function () {
-      coba++;
-      if (coba < MAKS) {
-        info.textContent = 'Menunggu TTD ter-upload… (' + coba + ')';
-        setTimeout(function () { im.src = sig + (sig.indexOf('?') < 0 ? '?' : '&') + 'r=' + Date.now(); }, 3000);
+      idx++;
+      if (idx < calon.length) { im.src = calon[idx]; return; }       // coba kandidat berikutnya
+      idx = 0; putaran++;
+      if (putaran < MAKS) {
+        info.textContent = 'Menunggu TTD ter-upload… (' + putaran + ')';
+        setTimeout(function () { im.src = calon[0] + '&r=' + Date.now(); }, 3000);
       } else {
         info.textContent = 'TTD belum bisa dimuat (cek internet / tunggu sync), cetak teks tetap bisa.';
       }
     };
-    im.src = sig;
+    im.src = calon[0];
   }
 
   function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
